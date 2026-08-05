@@ -1,4 +1,4 @@
-
+```javascript
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -12,29 +12,103 @@ window.addEventListener("resize", () => {
 
 
 /* =========================
-   GAME SETTINGS
+   GAME
 ========================= */
 
-const WORLD = 3000;
-
 let gameOver = false;
+let gameTime = 0;
+let wave = 1;
+let kills = 0;
+let xp = 0;
+let level = 1;
+let coins = 0;
 
 let keys = {};
 
-let mouse = {
+const mouse = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     down: false
 };
 
+
+/* =========================
+   WORLD
+========================= */
+
+const WORLD = 4000;
+
+const camera = {
+    x: 0,
+    y: 0
+};
+
+const buildings = [];
+const crates = [];
+const zombies = [];
+const bullets = [];
+const particles = [];
+const loot = [];
+
+
+/* =========================
+   PLAYER
+========================= */
+
+const player = {
+
+    x: WORLD / 2,
+    y: WORLD / 2,
+
+    radius: 18,
+
+    speed: 3.2,
+
+    health: 100,
+    maxHealth: 100,
+
+    ammo: 12,
+    maxAmmo: 12,
+
+    reserve: 60,
+
+    stamina: 100,
+
+    signal: 100,
+
+    damage: 1,
+
+    fireRate: 12,
+
+    angle: 0
+
+};
+
+
+/* =========================
+   CONTROLS
+========================= */
+
 document.addEventListener("keydown", e => {
+
     keys[e.key.toLowerCase()] = true;
 
-    if (e.key.toLowerCase() === "r") reload();
+    if (e.key.toLowerCase() === "r") {
+        reload();
+    }
 
-    if (e.key.toLowerCase() === "f") radio();
+    if (e.key.toLowerCase() === "f") {
+        radio();
+    }
 
-    if (e.key.toLowerCase() === "e") searchCrate();
+    if (e.key.toLowerCase() === "e") {
+        interact();
+    }
+
+    if (e.key.toLowerCase() === "q") {
+        upgradeWeapon();
+    }
+
 });
 
 document.addEventListener("keyup", e => {
@@ -42,11 +116,16 @@ document.addEventListener("keyup", e => {
 });
 
 canvas.addEventListener("mousemove", e => {
+
     mouse.x = e.clientX;
     mouse.y = e.clientY;
 
-    document.getElementById("crosshair").style.left = mouse.x + "px";
-    document.getElementById("crosshair").style.top = mouse.y + "px";
+    const crosshair =
+        document.getElementById("crosshair");
+
+    crosshair.style.left = mouse.x + "px";
+    crosshair.style.top = mouse.y + "px";
+
 });
 
 canvas.addEventListener("mousedown", () => {
@@ -59,75 +138,21 @@ canvas.addEventListener("mouseup", () => {
 
 
 /* =========================
-   PLAYER
+   BUILDINGS
 ========================= */
 
-const player = {
-    x: WORLD / 2,
-    y: WORLD / 2,
+for (let i = 0; i < 70; i++) {
 
-    radius: 18,
-
-    speed: 3,
-
-    health: 100,
-
-    ammo: 12,
-    maxAmmo: 12,
-
-    reserve: 48,
-
-    stamina: 100,
-
-    signal: 100,
-
-    angle: 0
-};
-
-
-/* =========================
-   CAMERA
-========================= */
-
-const camera = {
-    x: 0,
-    y: 0
-};
-
-
-/* =========================
-   WORLD
-========================= */
-
-let buildings = [];
-
-let crates = [];
-
-let zombies = [];
-
-let bullets = [];
-
-let particles = [];
-
-
-/* =========================
-   GENERATE BUILDINGS
-========================= */
-
-for (let i = 0; i < 45; i++) {
-
-    let w = 100 + Math.random() * 220;
-    let h = 100 + Math.random() * 220;
-
-    let x = Math.random() * (WORLD - w);
-    let y = Math.random() * (WORLD - h);
+    const w = 100 + Math.random() * 250;
+    const h = 100 + Math.random() * 250;
 
     buildings.push({
-        x,
-        y,
+        x: Math.random() * (WORLD - w),
+        y: Math.random() * (WORLD - h),
         w,
         h
     });
+
 }
 
 
@@ -135,57 +160,142 @@ for (let i = 0; i < 45; i++) {
    CRATES
 ========================= */
 
-for (let i = 0; i < 25; i++) {
+for (let i = 0; i < 40; i++) {
 
     crates.push({
         x: Math.random() * WORLD,
         y: Math.random() * WORLD,
-
         searched: false
     });
+
 }
 
 
 /* =========================
-   ZOMBIES
+   ZOMBIE TYPES
 ========================= */
 
-function spawnZombie() {
+const zombieTypes = {
 
-    let angle = Math.random() * Math.PI * 2;
+    normal: {
+        speed: 0.8,
+        health: 3,
+        damage: 5,
+        radius: 17
+    },
 
-    let distance = 500 + Math.random() * 900;
+    runner: {
+        speed: 1.8,
+        health: 2,
+        damage: 4,
+        radius: 13
+    },
+
+    tank: {
+        speed: 0.45,
+        health: 12,
+        damage: 12,
+        radius: 28
+    },
+
+    boss: {
+        speed: 0.65,
+        health: 60,
+        damage: 20,
+        radius: 45
+    }
+
+};
+
+
+/* =========================
+   SPAWN ZOMBIE
+========================= */
+
+function spawnZombie(type = "normal") {
+
+    const angle =
+        Math.random() * Math.PI * 2;
+
+    const distance =
+        700 + Math.random() * 1000;
+
+    const data = zombieTypes[type];
 
     zombies.push({
+
         x: player.x + Math.cos(angle) * distance,
         y: player.y + Math.sin(angle) * distance,
 
-        radius: 17,
+        type,
 
-        speed: 0.7 + Math.random() * 0.5,
+        radius: data.radius,
 
-        health: 3,
+        speed:
+            data.speed +
+            Math.random() * 0.3,
+
+        health:
+            data.health,
+
+        maxHealth:
+            data.health,
+
+        damage:
+            data.damage,
 
         attackCooldown: 0
+
     });
-}
 
-
-for (let i = 0; i < 15; i++) {
-    spawnZombie();
 }
 
 
 /* =========================
-   DAY / NIGHT
+   WAVES
 ========================= */
 
-let time = 0;
+function startWave() {
 
-function isNight() {
+    wave++;
 
-    return Math.floor(time / 20) % 2 === 1;
+    showMessage("WAVE " + wave);
 
+    let amount = 5 + wave * 2;
+
+    for (let i = 0; i < amount; i++) {
+
+        let type = "normal";
+
+        const random = Math.random();
+
+        if (wave >= 3 && random < .15) {
+            type = "runner";
+        }
+
+        if (wave >= 5 && random < .10) {
+            type = "tank";
+        }
+
+        spawnZombie(type);
+
+    }
+
+    if (wave % 5 === 0) {
+
+        spawnZombie("boss");
+
+        showMessage("⚠ BOSS DETECTED");
+
+    }
+
+}
+
+
+/* Initial zombies */
+
+for (let i = 0; i < 12; i++) {
+    spawnZombie();
 }
 
 
@@ -201,52 +311,68 @@ function shoot() {
 
     if (player.ammo <= 0) {
 
-        showMessage("OUT OF AMMO — PRESS R");
+        showMessage("NO AMMO — R TO RELOAD");
 
         return;
     }
 
     player.ammo--;
 
-    shootCooldown = 12;
+    shootCooldown =
+        Math.max(4, player.fireRate);
 
-    let worldMouseX = mouse.x + camera.x;
-    let worldMouseY = mouse.y + camera.y;
+    const worldX =
+        mouse.x + camera.x;
 
-    let angle = Math.atan2(
-        worldMouseY - player.y,
-        worldMouseX - player.x
-    );
+    const worldY =
+        mouse.y + camera.y;
+
+    const angle =
+        Math.atan2(
+            worldY - player.y,
+            worldX - player.x
+        );
 
     bullets.push({
 
         x: player.x,
         y: player.y,
 
-        dx: Math.cos(angle) * 14,
-        dy: Math.sin(angle) * 14,
+        dx: Math.cos(angle) * 16,
+        dy: Math.sin(angle) * 16,
 
         life: 60
+
     });
 
-    // shooting makes noise
-    attractZombies(600);
+    /* Gunshot noise */
+
+    attractZombies(800);
 
 }
 
 
+/* =========================
+   RELOAD
+========================= */
+
 function reload() {
 
-    if (player.ammo === player.maxAmmo) return;
+    if (player.ammo === player.maxAmmo) {
+        return;
+    }
 
-    if (player.reserve <= 0) return;
+    if (player.reserve <= 0) {
+        return;
+    }
 
-    let needed = player.maxAmmo - player.ammo;
+    const needed =
+        player.maxAmmo - player.ammo;
 
-    let amount = Math.min(needed, player.reserve);
+    const amount =
+        Math.min(needed, player.reserve);
 
     player.ammo += amount;
-
     player.reserve -= amount;
 
     showMessage("RELOADED");
@@ -260,142 +386,283 @@ function reload() {
 
 function radio() {
 
-    if (player.signal < 20) {
+    if (player.signal < 25) {
 
-        showMessage("SIGNAL TOO WEAK");
+        showMessage("SIGNAL TOO LOW");
 
         return;
     }
 
-    player.signal -= 20;
+    player.signal -= 25;
 
-    let crate = crates[Math.floor(Math.random() * crates.length)];
+    const x =
+        player.x +
+        (Math.random() - .5) * 1200;
 
-    crate.x = player.x + (Math.random() - .5) * 900;
-    crate.y = player.y + (Math.random() - .5) * 900;
+    const y =
+        player.y +
+        (Math.random() - .5) * 1200;
 
-    showMessage("📡 SUPPLY DROP DETECTED");
+    loot.push({
 
-    // radio attracts zombies
-    attractZombies(1000);
+        x,
+        y,
+
+        type: "supply",
+
+        amount: 1
+
+    });
+
+    showMessage("📡 SUPPLY DROP LOCATED");
+
+    attractZombies(1200);
+
 }
 
 
 /* =========================
-   SEARCH CRATE
+   INTERACTION
 ========================= */
 
-function searchCrate() {
+function interact() {
 
-    for (let crate of crates) {
+    /* Crates */
 
-        let distance = Math.hypot(
-            player.x - crate.x,
-            player.y - crate.y
-        );
+    for (const crate of crates) {
 
-        if (distance < 70 && !crate.searched) {
+        if (crate.searched) continue;
+
+        const distance =
+            Math.hypot(
+                player.x - crate.x,
+                player.y - crate.y
+            );
+
+        if (distance < 70) {
 
             crate.searched = true;
 
-            let reward = Math.random();
+            const roll = Math.random();
 
-            if (reward < .4) {
+            if (roll < .4) {
 
-                player.reserve += 12;
+                player.reserve += 15;
 
-                showMessage("+12 AMMO");
+                showMessage("+15 AMMO");
 
-            } else if (reward < .7) {
+            } else if (roll < .7) {
 
-                player.health = Math.min(
-                    100,
-                    player.health + 25
-                );
+                player.health =
+                    Math.min(
+                        player.maxHealth,
+                        player.health + 20
+                    );
 
-                showMessage("+25 HEALTH");
+                showMessage("+20 HEALTH");
 
             } else {
 
-                player.signal = Math.min(
-                    100,
-                    player.signal + 40
-                );
+                coins += 20;
 
-                showMessage("+40 SIGNAL");
+                showMessage("+20 COINS");
 
             }
 
             return;
         }
+
+    }
+
+
+    /* Loot */
+
+    for (let i = loot.length - 1; i >= 0; i--) {
+
+        const item = loot[i];
+
+        const distance =
+            Math.hypot(
+                player.x - item.x,
+                player.y - item.y
+            );
+
+        if (distance < 70) {
+
+            player.reserve += 30;
+
+            player.health =
+                Math.min(
+                    player.maxHealth,
+                    player.health + 20
+                );
+
+            coins += 30;
+
+            loot.splice(i, 1);
+
+            showMessage("📦 SUPPLY COLLECTED");
+
+            return;
+        }
+
     }
 
 }
 
 
 /* =========================
-   ZOMBIE AI
+   WEAPON UPGRADE
+========================= */
+
+function upgradeWeapon() {
+
+    const cost = level * 50;
+
+    if (coins < cost) {
+
+        showMessage(
+            "NEED " + cost + " COINS"
+        );
+
+        return;
+    }
+
+    coins -= cost;
+
+    player.damage++;
+
+    player.fireRate =
+        Math.max(
+            4,
+            player.fireRate - 1
+        );
+
+    showMessage("🔧 WEAPON UPGRADED");
+
+}
+
+
+/* =========================
+   ZOMBIE ATTRACT
 ========================= */
 
 function attractZombies(range) {
 
-    for (let zombie of zombies) {
+    for (const zombie of zombies) {
 
-        let distance = Math.hypot(
-            zombie.x - player.x,
-            zombie.y - player.y
-        );
+        const distance =
+            Math.hypot(
+                zombie.x - player.x,
+                zombie.y - player.y
+            );
 
         if (distance < range) {
 
-            zombie.speed += 0.2;
+            zombie.speed += .15;
 
         }
+
     }
-}
-
-
-/* =========================
-   PARTICLES
-========================= */
-
-function particle(x, y) {
-
-    particles.push({
-
-        x,
-        y,
-
-        dx: (Math.random() - .5) * 4,
-        dy: (Math.random() - .5) * 4,
-
-        life: 20
-    });
 
 }
 
 
 /* =========================
-   COLLISION
+   XP
 ========================= */
 
-function circleRectCollision(circle, rect) {
+function addXP(amount) {
 
-    let closestX = Math.max(
-        rect.x,
-        Math.min(circle.x, rect.x + rect.w)
-    );
+    xp += amount;
 
-    let closestY = Math.max(
-        rect.y,
-        Math.min(circle.y, rect.y + rect.h)
-    );
+    const needed =
+        level * 100;
 
-    let dx = circle.x - closestX;
-    let dy = circle.y - closestY;
+    if (xp >= needed) {
 
-    return dx * dx + dy * dy <
-        circle.radius * circle.radius;
+        xp -= needed;
+
+        level++;
+
+        player.maxHealth += 5;
+        player.health = player.maxHealth;
+
+        player.maxAmmo += 1;
+
+        showMessage(
+            "⭐ LEVEL " + level
+        );
+
+    }
+
+}
+
+
+/* =========================
+   BULLET HIT
+========================= */
+
+function damageZombie(zombie) {
+
+    zombie.health -= player.damage;
+
+    for (let i = 0; i < 5; i++) {
+
+        particles.push({
+
+            x: zombie.x,
+            y: zombie.y,
+
+            dx:
+                (Math.random() - .5) * 4,
+
+            dy:
+                (Math.random() - .5) * 4,
+
+            life: 20
+
+        });
+
+    }
+
+    if (zombie.health <= 0) {
+
+        const index =
+            zombies.indexOf(zombie);
+
+        zombies.splice(index, 1);
+
+        kills++;
+
+        coins +=
+            zombie.type === "boss"
+                ? 100
+                : 5;
+
+        addXP(
+            zombie.type === "boss"
+                ? 100
+                : 20
+        );
+
+        if (Math.random() < .25) {
+
+            loot.push({
+
+                x: zombie.x,
+                y: zombie.y,
+
+                type: "drop",
+
+                amount: 1
+
+            });
+
+        }
+
+    }
+
 }
 
 
@@ -407,11 +674,14 @@ function update() {
 
     if (gameOver) return;
 
-    time += 1 / 60;
+    gameTime++;
 
-    if (shootCooldown > 0) shootCooldown--;
+    if (shootCooldown > 0) {
+        shootCooldown--;
+    }
 
-    /* PLAYER MOVEMENT */
+
+    /* PLAYER */
 
     let dx = 0;
     let dy = 0;
@@ -421,33 +691,45 @@ function update() {
     if (keys["a"]) dx--;
     if (keys["d"]) dx++;
 
-    let moving = dx !== 0 || dy !== 0;
+    const moving =
+        dx !== 0 ||
+        dy !== 0;
 
-    let sprinting =
+    const sprinting =
         keys["shift"] &&
-        player.stamina > 0 &&
-        moving;
+        moving &&
+        player.stamina > 0;
 
-    let speed = sprinting ? 6 : player.speed;
+    let speed =
+        sprinting
+            ? 6
+            : player.speed;
+
 
     if (sprinting) {
 
-        player.stamina -= .7;
+        player.stamina -= .8;
 
     } else {
 
-        player.stamina += .35;
+        player.stamina += .4;
 
     }
 
-    player.stamina = Math.max(
-        0,
-        Math.min(100, player.stamina)
-    );
+    player.stamina =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                player.stamina
+            )
+        );
+
 
     if (moving) {
 
-        let length = Math.hypot(dx, dy);
+        const length =
+            Math.hypot(dx, dy);
 
         dx /= length;
         dy /= length;
@@ -457,81 +739,96 @@ function update() {
 
     }
 
-    player.x = Math.max(
-        20,
-        Math.min(WORLD - 20, player.x)
-    );
 
-    player.y = Math.max(
-        20,
-        Math.min(WORLD - 20, player.y)
-    );
+    player.x =
+        Math.max(
+            20,
+            Math.min(
+                WORLD - 20,
+                player.x
+            )
+        );
+
+    player.y =
+        Math.max(
+            20,
+            Math.min(
+                WORLD - 20,
+                player.y
+            )
+        );
 
 
     /* AIM */
 
-    player.angle = Math.atan2(
-        mouse.y + camera.y - player.y,
-        mouse.x + camera.x - player.x
-    );
+    player.angle =
+        Math.atan2(
+            mouse.y + camera.y - player.y,
+            mouse.x + camera.x - player.x
+        );
 
 
-    /* SHOOT */
-
-    if (mouse.down) shoot();
+    if (mouse.down) {
+        shoot();
+    }
 
 
     /* CAMERA */
 
-    camera.x = player.x - canvas.width / 2;
-    camera.y = player.y - canvas.height / 2;
+    camera.x =
+        player.x -
+        canvas.width / 2;
+
+    camera.y =
+        player.y -
+        canvas.height / 2;
 
 
     /* BULLETS */
 
-    for (let i = bullets.length - 1; i >= 0; i--) {
+    for (
+        let i = bullets.length - 1;
+        i >= 0;
+        i--
+    ) {
 
-        let bullet = bullets[i];
+        const bullet = bullets[i];
 
         bullet.x += bullet.dx;
         bullet.y += bullet.dy;
 
         bullet.life--;
 
-        let removed = false;
+        let hit = false;
 
-        for (let zombie of zombies) {
+        for (const zombie of zombies) {
 
-            let distance = Math.hypot(
-                bullet.x - zombie.x,
-                bullet.y - zombie.y
-            );
+            const distance =
+                Math.hypot(
+                    bullet.x - zombie.x,
+                    bullet.y - zombie.y
+                );
 
-            if (distance < zombie.radius + 5) {
+            if (
+                distance <
+                zombie.radius + 5
+            ) {
 
-                zombie.health--;
-
-                particle(bullet.x, bullet.y);
+                damageZombie(zombie);
 
                 bullets.splice(i, 1);
 
-                removed = true;
-
-                if (zombie.health <= 0) {
-
-                    let index = zombies.indexOf(zombie);
-
-                    zombies.splice(index, 1);
-
-                    setTimeout(spawnZombie, 1000);
-
-                }
+                hit = true;
 
                 break;
             }
+
         }
 
-        if (!removed && bullet.life <= 0) {
+        if (
+            !hit &&
+            bullet.life <= 0
+        ) {
 
             bullets.splice(i, 1);
 
@@ -542,35 +839,56 @@ function update() {
 
     /* ZOMBIES */
 
-    for (let zombie of zombies) {
+    for (const zombie of zombies) {
 
-        let dx = player.x - zombie.x;
-        let dy = player.y - zombie.y;
+        const dx =
+            player.x - zombie.x;
 
-        let distance = Math.hypot(dx, dy);
+        const dy =
+            player.y - zombie.y;
 
-        let speed = zombie.speed;
+        const distance =
+            Math.hypot(dx, dy);
+
+        let speed =
+            zombie.speed;
+
+
+        /* Night makes everything harder */
 
         if (isNight()) {
-            speed *= 1.5;
+            speed *= 1.4;
         }
 
-        if (distance > 35) {
 
-            zombie.x += dx / distance * speed;
-            zombie.y += dy / distance * speed;
+        if (distance > 40) {
+
+            zombie.x +=
+                dx / distance *
+                speed;
+
+            zombie.y +=
+                dy / distance *
+                speed;
 
         }
 
-        if (distance < 40) {
 
-            if (zombie.attackCooldown <= 0) {
+        if (distance < 45) {
 
-                player.health -= isNight() ? 8 : 5;
+            if (
+                zombie.attackCooldown <= 0
+            ) {
 
-                zombie.attackCooldown = 50;
+                player.health -=
+                    zombie.damage;
 
-                showMessage("A ZOMBIE GOT YOU!");
+                zombie.attackCooldown =
+                    45;
+
+                showMessage(
+                    "⚠ YOU ARE BEING ATTACKED"
+                );
 
             }
 
@@ -581,21 +899,26 @@ function update() {
     }
 
 
-    /* SIGNAL RECHARGE */
+    /* SIGNAL */
 
-    player.signal += .01;
+    player.signal += .015;
 
-    player.signal = Math.min(
-        100,
-        player.signal
-    );
+    player.signal =
+        Math.min(
+            100,
+            player.signal
+        );
 
 
     /* PARTICLES */
 
-    for (let i = particles.length - 1; i >= 0; i--) {
+    for (
+        let i = particles.length - 1;
+        i >= 0;
+        i--
+    ) {
 
-        let p = particles[i];
+        const p = particles[i];
 
         p.x += p.dx;
         p.y += p.dy;
@@ -607,10 +930,18 @@ function update() {
             particles.splice(i, 1);
 
         }
+
     }
 
 
-    /* GAME OVER */
+    /* NEW WAVE */
+
+    if (zombies.length === 0) {
+
+        startWave();
+
+    }
+
 
     if (player.health <= 0) {
 
@@ -619,22 +950,20 @@ function update() {
     }
 
 
-    /* UI */
+    updateUI();
 
-    document.getElementById("health").textContent =
-        Math.max(0, Math.floor(player.health));
+}
 
-    document.getElementById("ammo").textContent =
-        player.ammo;
 
-    document.getElementById("reserve").textContent =
-        player.reserve;
+/* =========================
+   DAY / NIGHT
+========================= */
 
-    document.getElementById("signal").textContent =
-        Math.floor(player.signal);
+function isNight() {
 
-    document.getElementById("stamina").textContent =
-        Math.floor(player.stamina);
+    return Math.floor(
+        gameTime / 1800
+    ) % 2 === 1;
 
 }
 
@@ -662,7 +991,7 @@ function draw() {
 
     /* GROUND */
 
-    ctx.fillStyle = "#1c351c";
+    ctx.fillStyle = "#183518";
 
     ctx.fillRect(
         0,
@@ -672,12 +1001,16 @@ function draw() {
     );
 
 
-    /* ROAD GRID */
+    /* GRID */
 
-    ctx.strokeStyle = "rgba(255,255,255,.035)";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle =
+        "rgba(255,255,255,.025)";
 
-    for (let x = 0; x < WORLD; x += 100) {
+    for (
+        let x = 0;
+        x < WORLD;
+        x += 100
+    ) {
 
         ctx.beginPath();
 
@@ -688,7 +1021,11 @@ function draw() {
 
     }
 
-    for (let y = 0; y < WORLD; y += 100) {
+    for (
+        let y = 0;
+        y < WORLD;
+        y += 100
+    ) {
 
         ctx.beginPath();
 
@@ -702,9 +1039,9 @@ function draw() {
 
     /* BUILDINGS */
 
-    for (let building of buildings) {
+    for (const building of buildings) {
 
-        ctx.fillStyle = "#202020";
+        ctx.fillStyle = "#242424";
 
         ctx.fillRect(
             building.x,
@@ -713,7 +1050,7 @@ function draw() {
             building.h
         );
 
-        ctx.strokeStyle = "#444";
+        ctx.strokeStyle = "#555";
 
         ctx.strokeRect(
             building.x,
@@ -727,22 +1064,13 @@ function draw() {
 
     /* CRATES */
 
-    for (let crate of crates) {
+    for (const crate of crates) {
 
         if (crate.searched) continue;
 
-        ctx.fillStyle = "#b58b35";
+        ctx.fillStyle = "#a8792f";
 
         ctx.fillRect(
-            crate.x - 15,
-            crate.y - 15,
-            30,
-            30
-        );
-
-        ctx.strokeStyle = "#e5c56b";
-
-        ctx.strokeRect(
             crate.x - 15,
             crate.y - 15,
             30,
@@ -752,11 +1080,32 @@ function draw() {
     }
 
 
+    /* LOOT */
+
+    for (const item of loot) {
+
+        ctx.fillStyle = "#55ddff";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            item.x,
+            item.y,
+            10,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+
     /* BULLETS */
 
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "white";
 
-    for (let bullet of bullets) {
+    for (const bullet of bullets) {
 
         ctx.beginPath();
 
@@ -775,10 +1124,23 @@ function draw() {
 
     /* ZOMBIES */
 
-    for (let zombie of zombies) {
+    for (const zombie of zombies) {
 
-        ctx.fillStyle =
-            isNight() ? "#713b8f" : "#557a46";
+        let color = "#557a46";
+
+        if (zombie.type === "runner") {
+            color = "#d4a13b";
+        }
+
+        if (zombie.type === "tank") {
+            color = "#704545";
+        }
+
+        if (zombie.type === "boss") {
+            color = "#9b2525";
+        }
+
+        ctx.fillStyle = color;
 
         ctx.beginPath();
 
@@ -792,29 +1154,42 @@ function draw() {
 
         ctx.fill();
 
-        // eyes
 
-        ctx.fillStyle = "#fff";
+        /* Health bar */
 
-        ctx.beginPath();
+        if (
+            zombie.type === "tank" ||
+            zombie.type === "boss"
+        ) {
 
-        ctx.arc(
-            zombie.x - 5,
-            zombie.y - 4,
-            3,
-            0,
-            Math.PI * 2
-        );
+            const width =
+                zombie.radius * 2;
 
-        ctx.arc(
-            zombie.x + 5,
-            zombie.y - 4,
-            3,
-            0,
-            Math.PI * 2
-        );
+            ctx.fillStyle = "#111";
 
-        ctx.fill();
+            ctx.fillRect(
+                zombie.x - zombie.radius,
+                zombie.y -
+                    zombie.radius -
+                    10,
+                width,
+                5
+            );
+
+            ctx.fillStyle = "#e33";
+
+            ctx.fillRect(
+                zombie.x - zombie.radius,
+                zombie.y -
+                    zombie.radius -
+                    10,
+                width *
+                    (zombie.health /
+                        zombie.maxHealth),
+                5
+            );
+
+        }
 
     }
 
@@ -828,9 +1203,11 @@ function draw() {
         player.y
     );
 
-    ctx.rotate(player.angle);
+    ctx.rotate(
+        player.angle
+    );
 
-    ctx.fillStyle = "#4ea3ff";
+    ctx.fillStyle = "#4da3ff";
 
     ctx.beginPath();
 
@@ -844,14 +1221,15 @@ function draw() {
 
     ctx.fill();
 
-    // weapon
 
-    ctx.fillStyle = "#222";
+    /* Gun */
+
+    ctx.fillStyle = "#111";
 
     ctx.fillRect(
         5,
         -4,
-        25,
+        30,
         8
     );
 
@@ -860,9 +1238,9 @@ function draw() {
 
     /* PARTICLES */
 
-    for (let p of particles) {
+    ctx.fillStyle = "#ddd";
 
-        ctx.fillStyle = "#ddd";
+    for (const p of particles) {
 
         ctx.fillRect(
             p.x,
@@ -882,7 +1260,7 @@ function draw() {
     if (isNight()) {
 
         ctx.fillStyle =
-            "rgba(5,5,30,.72)";
+            "rgba(3,5,30,.75)";
 
         ctx.fillRect(
             0,
@@ -891,20 +1269,22 @@ function draw() {
             canvas.height
         );
 
+
         /* FLASHLIGHT */
 
-        let gradient = ctx.createRadialGradient(
-            mouse.x,
-            mouse.y,
-            40,
-            mouse.x,
-            mouse.y,
-            280
-        );
+        const gradient =
+            ctx.createRadialGradient(
+                mouse.x,
+                mouse.y,
+                20,
+                mouse.x,
+                mouse.y,
+                330
+            );
 
         gradient.addColorStop(
             0,
-            "rgba(255,255,255,.20)"
+            "rgba(255,255,255,.25)"
         );
 
         gradient.addColorStop(
@@ -924,17 +1304,116 @@ function draw() {
     }
 
 
-    /* NIGHT/DAY MESSAGE */
+    drawMinimap();
 
-    ctx.fillStyle = "white";
+}
 
-    ctx.font = "bold 14px Arial";
 
-    ctx.fillText(
-        isNight() ? "🌙 NIGHT" : "☀ DAY",
-        20,
-        30
+/* =========================
+   MINIMAP
+========================= */
+
+function drawMinimap() {
+
+    const size = 150;
+
+    const x =
+        canvas.width -
+        size -
+        20;
+
+    const y = 20;
+
+    ctx.fillStyle =
+        "rgba(0,0,0,.65)";
+
+    ctx.fillRect(
+        x,
+        y,
+        size,
+        size
     );
+
+
+    /* Player */
+
+    const px =
+        x +
+        player.x / WORLD * size;
+
+    const py =
+        y +
+        player.y / WORLD * size;
+
+    ctx.fillStyle = "#4da3ff";
+
+    ctx.fillRect(
+        px - 3,
+        py - 3,
+        6,
+        6
+    );
+
+
+    /* Zombies */
+
+    ctx.fillStyle = "#e33";
+
+    for (const zombie of zombies) {
+
+        const zx =
+            x +
+            zombie.x / WORLD * size;
+
+        const zy =
+            y +
+            zombie.y / WORLD * size;
+
+        ctx.fillRect(
+            zx - 2,
+            zy - 2,
+            4,
+            4
+        );
+
+    }
+
+}
+
+
+/* =========================
+   UI
+========================= */
+
+function updateUI() {
+
+    document.getElementById(
+        "health"
+    ).textContent =
+        Math.max(
+            0,
+            Math.floor(player.health)
+        );
+
+    document.getElementById(
+        "ammo"
+    ).textContent =
+        player.ammo;
+
+    document.getElementById(
+        "reserve"
+    ).textContent =
+        player.reserve;
+
+    document.getElementById(
+        "signal"
+    ).textContent =
+        Math.floor(player.signal);
+
+    document.getElementById(
+        "stamina"
+    ).textContent =
+        Math.floor(player.stamina);
 
 }
 
@@ -948,17 +1427,20 @@ let messageTimer;
 function showMessage(text) {
 
     const message =
-        document.getElementById("message");
+        document.getElementById(
+            "message"
+        );
 
     message.textContent = text;
 
     clearTimeout(messageTimer);
 
-    messageTimer = setTimeout(() => {
+    messageTimer =
+        setTimeout(() => {
 
-        message.textContent = "";
+            message.textContent = "";
 
-    }, 1500);
+        }, 1800);
 
 }
 
@@ -971,11 +1453,14 @@ function endGame() {
 
     gameOver = true;
 
-    document.getElementById("gameOver").style.display =
-        "flex";
+    document.getElementById(
+        "gameOver"
+    ).style.display = "flex";
 
-    document.getElementById("finalScore").textContent =
-        Math.floor(time);
+    document.getElementById(
+        "finalScore"
+    ).textContent =
+        Math.floor(gameTime / 60);
 
 }
 
@@ -990,8 +1475,11 @@ function gameLoop() {
 
     draw();
 
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(
+        gameLoop
+    );
 
 }
 
 gameLoop();
+```
