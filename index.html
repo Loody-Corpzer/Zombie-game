@@ -2,18 +2,42 @@
 <html lang="en">
 
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zombie Survival</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="style.css">
+    <title>Dead Signal</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<canvas id="game"></canvas>
+    <canvas id="game"></canvas>
 
-<script src="game.js"></script>
+    <div id="ui">
+        <div class="topbar">
+            <div>❤️ <span id="health">100</span></div>
+            <div>🔫 <span id="ammo">12</span> / <span id="reserve">48</span></div>
+            <div>📡 <span id="signal">100</span>%</div>
+            <div>⚡ <span id="stamina">100</span></div>
+        </div>
+
+        <div id="message"></div>
+
+        <div id="crosshair"></div>
+
+        <div id="help">
+            WASD Move • SHIFT Sprint • Mouse Shoot • R Reload • F Radio • E Search
+        </div>
+    </div>
+
+    <div id="gameOver">
+        <h1>THE SIGNAL IS DEAD</h1>
+        <p>You survived <span id="finalScore">0</span> seconds.</p>
+        <button onclick="location.reload()">TRY AGAIN</button>
+    </div>
+
+    <script src="game.js"></script>
 
 </body>
 </html>
