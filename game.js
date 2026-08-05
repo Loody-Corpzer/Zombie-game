@@ -1,29 +1,34 @@
-```javascript
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 window.addEventListener("resize", () => {
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 });
 
+/* =====================================================
+   GAME STATE
+===================================================== */
 
-/* =========================
-   GAME
-========================= */
-
+let gameStarted = false;
 let gameOver = false;
+
 let gameTime = 0;
-let wave = 1;
+let wave = 0;
 let kills = 0;
+
 let xp = 0;
 let level = 1;
 let coins = 0;
 
-let keys = {};
+let selectedCharacter = "scout";
+
+const WORLD = 5000;
+
+const keys = {};
 
 const mouse = {
     x: canvas.width / 2,
@@ -31,295 +36,447 @@ const mouse = {
     down: false
 };
 
-
-/* =========================
-   WORLD
-========================= */
-
-const WORLD = 4000;
-
 const camera = {
     x: 0,
     y: 0
 };
 
-const buildings = [];
-const crates = [];
-const zombies = [];
-const bullets = [];
-const particles = [];
-const loot = [];
 
-
-/* =========================
+/* =====================================================
    PLAYER
-========================= */
+===================================================== */
 
 const player = {
-
     x: WORLD / 2,
     y: WORLD / 2,
 
     radius: 18,
 
-    speed: 3.2,
-
     health: 100,
     maxHealth: 100,
 
-    ammo: 12,
-    maxAmmo: 12,
-
-    reserve: 60,
-
     stamina: 100,
-
     signal: 100,
 
+    ammo: 12,
+    maxAmmo: 12,
+    reserve: 60,
+
+    speed: 3.2,
     damage: 1,
 
-    fireRate: 12,
-
+    weapon: 0,
     angle: 0
-
 };
 
 
-/* =========================
-   CONTROLS
-========================= */
+/* =====================================================
+   CHARACTERS
+===================================================== */
 
-document.addEventListener("keydown", e => {
+const characters = {
+    scout: {
+        speed: 4.2,
+        health: 80,
+        damage: 1,
+        ammo: 12
+    },
 
-    keys[e.key.toLowerCase()] = true;
+    soldier: {
+        speed: 3.2,
+        health: 110,
+        damage: 2,
+        ammo: 12
+    },
 
-    if (e.key.toLowerCase() === "r") {
-        reload();
+    tank: {
+        speed: 2.3,
+        health: 160,
+        damage: 3,
+        ammo: 10
+    }
+};
+
+
+/* =====================================================
+   WEAPONS
+===================================================== */
+
+const weapons = [
+    {
+        name: "PISTOL",
+        damage: 1,
+        fireRate: 12,
+        maxAmmo: 12,
+        spread: 0,
+        pellets: 1
+    },
+
+    {
+        name: "SMG",
+        damage: 1,
+        fireRate: 5,
+        maxAmmo: 30,
+        spread: 0.08,
+        pellets: 1
+    },
+
+    {
+        name: "SHOTGUN",
+        damage: 2,
+        fireRate: 35,
+        maxAmmo: 6,
+        spread: 0.3,
+        pellets: 7
+    }
+];
+
+
+/* =====================================================
+   WORLD
+===================================================== */
+
+let buildings = [];
+let doors = [];
+let crates = [];
+
+let zombies = [];
+let bullets = [];
+let particles = [];
+let loot = [];
+
+let shootCooldown = 0;
+
+
+/* =====================================================
+   CITY GENERATION
+===================================================== */
+
+function generateCity() {
+
+    buildings = [];
+    doors = [];
+    crates = [];
+
+    const grid = 350;
+
+    for (let x = 100; x < WORLD - 300; x += grid) {
+
+        for (let y = 100; y < WORLD - 300; y += grid) {
+
+            if (Math.random() < 0.72) {
+
+                const w = 150 + Math.random() * 120;
+                const h = 150 + Math.random() * 120;
+
+                const building = {
+                    x: x + Math.random() * 80,
+                    y: y + Math.random() * 80,
+                    w: w,
+                    h: h
+                };
+
+                buildings.push(building);
+
+                doors.push({
+                    x: building.x + building.w / 2,
+                    y: building.y + building.h,
+                    open: false,
+                    building: building
+                });
+            }
+        }
     }
 
-    if (e.key.toLowerCase() === "f") {
-        radio();
-    }
+    for (let i = 0; i < 80; i++) {
 
-    if (e.key.toLowerCase() === "e") {
-        interact();
+        crates.push({
+            x: Math.random() * WORLD,
+            y: Math.random() * WORLD,
+            searched: false
+        });
     }
+}
 
-    if (e.key.toLowerCase() === "q") {
-        upgradeWeapon();
-    }
+generateCity();
+
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+document.addEventListener("keydown", (event) => {
+
+    keys[event.key.toLowerCase()] = true;
+
+    const key = event.key.toLowerCase();
+
+    if (key === "r") reload();
+    if (key === "e") interact();
+    if (key === "f") radio();
+    if (key === "q") upgrade();
+
+    if (key === "1") switchWeapon(0);
+    if (key === "2") switchWeapon(1);
+    if (key === "3") switchWeapon(2);
+});
+
+
+document.addEventListener("keyup", (event) => {
+
+    keys[event.key.toLowerCase()] = false;
 
 });
 
-document.addEventListener("keyup", e => {
-    keys[e.key.toLowerCase()] = false;
-});
 
-canvas.addEventListener("mousemove", e => {
+canvas.addEventListener("mousemove", (event) => {
 
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
 
     const crosshair =
         document.getElementById("crosshair");
 
-    crosshair.style.left = mouse.x + "px";
-    crosshair.style.top = mouse.y + "px";
-
+    if (crosshair) {
+        crosshair.style.left = mouse.x + "px";
+        crosshair.style.top = mouse.y + "px";
+    }
 });
+
 
 canvas.addEventListener("mousedown", () => {
     mouse.down = true;
 });
+
 
 canvas.addEventListener("mouseup", () => {
     mouse.down = false;
 });
 
 
-/* =========================
-   BUILDINGS
-========================= */
+/* =====================================================
+   CHARACTER SELECTION
+===================================================== */
 
-for (let i = 0; i < 70; i++) {
+document.querySelectorAll(".character").forEach(button => {
 
-    const w = 100 + Math.random() * 250;
-    const h = 100 + Math.random() * 250;
+    button.addEventListener("click", () => {
 
-    buildings.push({
-        x: Math.random() * (WORLD - w),
-        y: Math.random() * (WORLD - h),
-        w,
-        h
+        document
+            .querySelectorAll(".character")
+            .forEach(button => {
+                button.classList.remove("selected");
+            });
+
+        button.classList.add("selected");
+
+        selectedCharacter =
+            button.dataset.character;
+    });
+
+});
+
+
+/* =====================================================
+   START GAME
+===================================================== */
+
+const startButton =
+    document.getElementById("startButton");
+
+if (startButton) {
+
+    startButton.addEventListener("click", () => {
+        startGame();
     });
 
 }
 
 
-/* =========================
-   CRATES
-========================= */
+function startGame() {
 
-for (let i = 0; i < 40; i++) {
+    const character =
+        characters[selectedCharacter];
 
-    crates.push({
-        x: Math.random() * WORLD,
-        y: Math.random() * WORLD,
-        searched: false
-    });
+    player.speed = character.speed;
 
+    player.maxHealth = character.health;
+    player.health = character.health;
+
+    player.damage = character.damage;
+
+    player.maxAmmo = character.ammo;
+    player.ammo = character.ammo;
+
+    player.reserve = 60;
+
+    player.x = WORLD / 2;
+    player.y = WORLD / 2;
+
+    gameStarted = true;
+    gameOver = false;
+
+    document.getElementById("menu").style.display = "none";
+
+    nextWave();
 }
 
 
-/* =========================
+/* =====================================================
    ZOMBIE TYPES
-========================= */
+===================================================== */
 
 const zombieTypes = {
 
-    normal: {
-        speed: 0.8,
+    walker: {
+        speed: 0.7,
         health: 3,
         damage: 5,
         radius: 17
     },
 
     runner: {
-        speed: 1.8,
+        speed: 1.7,
         health: 2,
-        damage: 4,
+        damage: 5,
         radius: 13
     },
 
     tank: {
         speed: 0.45,
-        health: 12,
-        damage: 12,
-        radius: 28
+        health: 15,
+        damage: 15,
+        radius: 29
     },
 
     boss: {
-        speed: 0.65,
-        health: 60,
-        damage: 20,
-        radius: 45
+        speed: 0.6,
+        health: 100,
+        damage: 25,
+        radius: 50
     }
 
 };
 
 
-/* =========================
+/* =====================================================
    SPAWN ZOMBIE
-========================= */
+===================================================== */
 
-function spawnZombie(type = "normal") {
+function spawnZombie(type = "walker") {
+
+    const data = zombieTypes[type];
 
     const angle =
         Math.random() * Math.PI * 2;
 
     const distance =
-        700 + Math.random() * 1000;
-
-    const data = zombieTypes[type];
+        800 + Math.random() * 900;
 
     zombies.push({
 
-        x: player.x + Math.cos(angle) * distance,
-        y: player.y + Math.sin(angle) * distance,
+        x:
+            player.x +
+            Math.cos(angle) * distance,
 
-        type,
+        y:
+            player.y +
+            Math.sin(angle) * distance,
+
+        type: type,
 
         radius: data.radius,
 
-        speed:
-            data.speed +
-            Math.random() * 0.3,
+        speed: data.speed,
 
-        health:
-            data.health,
+        health: data.health,
 
-        maxHealth:
-            data.health,
+        maxHealth: data.health,
 
-        damage:
-            data.damage,
+        damage: data.damage,
 
-        attackCooldown: 0
+        attackCooldown: 0,
 
+        animation: Math.random() * 10
     });
-
 }
 
 
-/* =========================
+/* =====================================================
    WAVES
-========================= */
+===================================================== */
 
-function startWave() {
+function nextWave() {
 
     wave++;
 
     showMessage("WAVE " + wave);
 
-    let amount = 5 + wave * 2;
+    const amount = 6 + wave * 3;
 
     for (let i = 0; i < amount; i++) {
 
-        let type = "normal";
+        let type = "walker";
 
         const random = Math.random();
 
-        if (wave >= 3 && random < .15) {
+        if (wave >= 3 && random < 0.18) {
             type = "runner";
         }
 
-        if (wave >= 5 && random < .10) {
+        if (wave >= 5 && random < 0.10) {
             type = "tank";
         }
 
         spawnZombie(type);
-
     }
 
     if (wave % 5 === 0) {
 
         spawnZombie("boss");
 
-        showMessage("⚠ BOSS DETECTED");
-
+        showMessage("⚠ BOSS INCOMING");
     }
-
 }
 
 
-/* Initial zombies */
+/* =====================================================
+   WEAPONS
+===================================================== */
 
-for (let i = 0; i < 12; i++) {
-    spawnZombie();
+function switchWeapon(index) {
+
+    if (!weapons[index]) return;
+
+    player.weapon = index;
+
+    const weapon = weapons[index];
+
+    player.maxAmmo = weapon.maxAmmo;
+
+    player.ammo =
+        Math.min(player.ammo, player.maxAmmo);
+
+    showMessage(weapon.name);
 }
 
-
-/* =========================
-   SHOOTING
-========================= */
-
-let shootCooldown = 0;
 
 function shoot() {
 
     if (shootCooldown > 0) return;
 
+    const weapon = weapons[player.weapon];
+
     if (player.ammo <= 0) {
 
-        showMessage("NO AMMO — R TO RELOAD");
+        showMessage("PRESS R TO RELOAD");
 
         return;
     }
 
     player.ammo--;
 
-    shootCooldown =
-        Math.max(4, player.fireRate);
+    shootCooldown = weapon.fireRate;
 
     const worldX =
         mouse.x + camera.x;
@@ -327,42 +484,47 @@ function shoot() {
     const worldY =
         mouse.y + camera.y;
 
-    const angle =
+    const baseAngle =
         Math.atan2(
             worldY - player.y,
             worldX - player.x
         );
 
-    bullets.push({
+    for (let i = 0; i < weapon.pellets; i++) {
 
-        x: player.x,
-        y: player.y,
+        const angle =
+            baseAngle +
+            (Math.random() - 0.5) *
+            weapon.spread;
 
-        dx: Math.cos(angle) * 16,
-        dy: Math.sin(angle) * 16,
+        bullets.push({
 
-        life: 60
+            x: player.x,
+            y: player.y,
 
-    });
+            dx: Math.cos(angle) * 17,
+            dy: Math.sin(angle) * 17,
 
-    /* Gunshot noise */
+            damage:
+                weapon.damage *
+                player.damage,
 
-    attractZombies(800);
+            life: 60
+        });
+    }
 
+    makeNoise(900);
 }
 
 
-/* =========================
-   RELOAD
-========================= */
-
 function reload() {
 
-    if (player.ammo === player.maxAmmo) {
-        return;
-    }
+    if (player.ammo >= player.maxAmmo) return;
 
     if (player.reserve <= 0) {
+
+        showMessage("NO AMMO");
+
         return;
     }
 
@@ -370,64 +532,80 @@ function reload() {
         player.maxAmmo - player.ammo;
 
     const amount =
-        Math.min(needed, player.reserve);
+        Math.min(
+            needed,
+            player.reserve
+        );
 
     player.ammo += amount;
     player.reserve -= amount;
 
     showMessage("RELOADED");
-
 }
 
 
-/* =========================
+/* =====================================================
+   NOISE
+===================================================== */
+
+function makeNoise(range) {
+
+    zombies.forEach(zombie => {
+
+        const distance =
+            Math.hypot(
+                zombie.x - player.x,
+                zombie.y - player.y
+            );
+
+        if (distance < range) {
+            zombie.speed += 0.15;
+        }
+    });
+}
+
+
+/* =====================================================
    RADIO
-========================= */
+===================================================== */
 
 function radio() {
 
     if (player.signal < 25) {
 
-        showMessage("SIGNAL TOO LOW");
+        showMessage("SIGNAL TOO WEAK");
 
         return;
     }
 
     player.signal -= 25;
 
-    const x =
-        player.x +
-        (Math.random() - .5) * 1200;
-
-    const y =
-        player.y +
-        (Math.random() - .5) * 1200;
-
     loot.push({
 
-        x,
-        y,
+        x:
+            player.x +
+            (Math.random() - 0.5) * 1500,
 
-        type: "supply",
+        y:
+            player.y +
+            (Math.random() - 0.5) * 1500,
 
-        amount: 1
-
+        type: "supply"
     });
 
-    showMessage("📡 SUPPLY DROP LOCATED");
+    makeNoise(1300);
 
-    attractZombies(1200);
-
+    showMessage("📡 SUPPLY DROP FOUND");
 }
 
 
-/* =========================
+/* =====================================================
    INTERACTION
-========================= */
+===================================================== */
 
 function interact() {
 
-    /* Crates */
+    /* CRATES */
 
     for (const crate of crates) {
 
@@ -443,39 +621,62 @@ function interact() {
 
             crate.searched = true;
 
-            const roll = Math.random();
+            const random = Math.random();
 
-            if (roll < .4) {
+            if (random < 0.4) {
 
-                player.reserve += 15;
+                player.reserve += 20;
 
-                showMessage("+15 AMMO");
+                showMessage("+20 AMMO");
 
-            } else if (roll < .7) {
+            } else if (random < 0.7) {
 
                 player.health =
                     Math.min(
                         player.maxHealth,
-                        player.health + 20
+                        player.health + 25
                     );
 
-                showMessage("+20 HEALTH");
+                showMessage("+25 HEALTH");
 
             } else {
 
-                coins += 20;
+                coins += 30;
 
-                showMessage("+20 COINS");
-
+                showMessage("+30 COINS");
             }
 
             return;
         }
-
     }
 
 
-    /* Loot */
+    /* DOORS */
+
+    for (const door of doors) {
+
+        const distance =
+            Math.hypot(
+                player.x - door.x,
+                player.y - door.y
+            );
+
+        if (distance < 80) {
+
+            door.open = !door.open;
+
+            showMessage(
+                door.open
+                    ? "DOOR OPEN"
+                    : "DOOR CLOSED"
+            );
+
+            return;
+        }
+    }
+
+
+    /* LOOT */
 
     for (let i = loot.length - 1; i >= 0; i--) {
 
@@ -497,25 +698,23 @@ function interact() {
                     player.health + 20
                 );
 
-            coins += 30;
+            coins += 50;
 
             loot.splice(i, 1);
 
-            showMessage("📦 SUPPLY COLLECTED");
+            showMessage("📦 SUPPLIES COLLECTED");
 
             return;
         }
-
     }
-
 }
 
 
-/* =========================
-   WEAPON UPGRADE
-========================= */
+/* =====================================================
+   UPGRADE
+===================================================== */
 
-function upgradeWeapon() {
+function upgrade() {
 
     const cost = level * 50;
 
@@ -532,52 +731,23 @@ function upgradeWeapon() {
 
     player.damage++;
 
-    player.fireRate =
-        Math.max(
-            4,
-            player.fireRate - 1
-        );
+    player.maxHealth += 5;
 
-    showMessage("🔧 WEAPON UPGRADED");
+    player.health = player.maxHealth;
 
+    showMessage("🔧 UPGRADE COMPLETE");
 }
 
 
-/* =========================
-   ZOMBIE ATTRACT
-========================= */
-
-function attractZombies(range) {
-
-    for (const zombie of zombies) {
-
-        const distance =
-            Math.hypot(
-                zombie.x - player.x,
-                zombie.y - player.y
-            );
-
-        if (distance < range) {
-
-            zombie.speed += .15;
-
-        }
-
-    }
-
-}
-
-
-/* =========================
+/* =====================================================
    XP
-========================= */
+===================================================== */
 
-function addXP(amount) {
+function gainXP(amount) {
 
     xp += amount;
 
-    const needed =
-        level * 100;
+    const needed = level * 100;
 
     if (xp >= needed) {
 
@@ -585,94 +755,69 @@ function addXP(amount) {
 
         level++;
 
-        player.maxHealth += 5;
-        player.health = player.maxHealth;
+        player.maxHealth += 10;
 
-        player.maxAmmo += 1;
+        player.health = player.maxHealth;
 
         showMessage(
             "⭐ LEVEL " + level
         );
-
     }
-
 }
 
 
-/* =========================
-   BULLET HIT
-========================= */
+/* =====================================================
+   KILL ZOMBIE
+===================================================== */
 
-function damageZombie(zombie) {
+function killZombie(zombie) {
 
-    zombie.health -= player.damage;
+    const index = zombies.indexOf(zombie);
 
-    for (let i = 0; i < 5; i++) {
+    if (index === -1) return;
 
-        particles.push({
+    zombies.splice(index, 1);
+
+    kills++;
+
+    const reward =
+        zombie.type === "boss"
+            ? 250
+            : 10;
+
+    coins += reward;
+
+    gainXP(
+        zombie.type === "boss"
+            ? 200
+            : 25
+    );
+
+    createParticles(
+        zombie.x,
+        zombie.y
+    );
+
+    if (Math.random() < 0.3) {
+
+        loot.push({
 
             x: zombie.x,
             y: zombie.y,
 
-            dx:
-                (Math.random() - .5) * 4,
-
-            dy:
-                (Math.random() - .5) * 4,
-
-            life: 20
-
+            type: "drop"
         });
-
     }
-
-    if (zombie.health <= 0) {
-
-        const index =
-            zombies.indexOf(zombie);
-
-        zombies.splice(index, 1);
-
-        kills++;
-
-        coins +=
-            zombie.type === "boss"
-                ? 100
-                : 5;
-
-        addXP(
-            zombie.type === "boss"
-                ? 100
-                : 20
-        );
-
-        if (Math.random() < .25) {
-
-            loot.push({
-
-                x: zombie.x,
-                y: zombie.y,
-
-                type: "drop",
-
-                amount: 1
-
-            });
-
-        }
-
-    }
-
 }
 
 
-/* =========================
+/* =====================================================
    UPDATE
-========================= */
+===================================================== */
 
 function update() {
 
-    if (gameOver) return;
+    if (!gameStarted || gameOver) return;
 
     gameTime++;
 
@@ -681,7 +826,7 @@ function update() {
     }
 
 
-    /* PLAYER */
+    /* MOVEMENT */
 
     let dx = 0;
     let dy = 0;
@@ -691,30 +836,31 @@ function update() {
     if (keys["a"]) dx--;
     if (keys["d"]) dx++;
 
-    const moving =
-        dx !== 0 ||
-        dy !== 0;
 
-    const sprinting =
+    const moving =
+        dx !== 0 || dy !== 0;
+
+    const sprint =
         keys["shift"] &&
         moving &&
         player.stamina > 0;
 
-    let speed =
-        sprinting
-            ? 6
+
+    const speed =
+        sprint
+            ? player.speed * 1.8
             : player.speed;
 
 
-    if (sprinting) {
+    if (sprint) {
 
-        player.stamina -= .8;
+        player.stamina -= 0.9;
 
     } else {
 
-        player.stamina += .4;
-
+        player.stamina += 0.4;
     }
+
 
     player.stamina =
         Math.max(
@@ -736,7 +882,6 @@ function update() {
 
         player.x += dx * speed;
         player.y += dy * speed;
-
     }
 
 
@@ -786,11 +931,7 @@ function update() {
 
     /* BULLETS */
 
-    for (
-        let i = bullets.length - 1;
-        i >= 0;
-        i--
-    ) {
+    for (let i = bullets.length - 1; i >= 0; i--) {
 
         const bullet = bullets[i];
 
@@ -801,7 +942,7 @@ function update() {
 
         let hit = false;
 
-        for (const zombie of zombies) {
+        for (const zombie of [...zombies]) {
 
             const distance =
                 Math.hypot(
@@ -814,7 +955,16 @@ function update() {
                 zombie.radius + 5
             ) {
 
-                damageZombie(zombie);
+                zombie.health -= bullet.damage;
+
+                createParticles(
+                    bullet.x,
+                    bullet.y
+                );
+
+                if (zombie.health <= 0) {
+                    killZombie(zombie);
+                }
 
                 bullets.splice(i, 1);
 
@@ -822,18 +972,11 @@ function update() {
 
                 break;
             }
-
         }
 
-        if (
-            !hit &&
-            bullet.life <= 0
-        ) {
-
+        if (!hit && bullet.life <= 0) {
             bullets.splice(i, 1);
-
         }
-
     }
 
 
@@ -850,58 +993,48 @@ function update() {
         const distance =
             Math.hypot(dx, dy);
 
-        let speed =
-            zombie.speed;
 
-
-        /* Night makes everything harder */
+        let speed = zombie.speed;
 
         if (isNight()) {
             speed *= 1.4;
         }
 
 
-        if (distance > 40) {
+        zombie.animation += 0.1;
+
+
+        if (distance > 45) {
 
             zombie.x +=
-                dx / distance *
+                (dx / distance) *
                 speed;
 
             zombie.y +=
-                dy / distance *
+                (dy / distance) *
                 speed;
-
         }
 
 
-        if (distance < 45) {
+        if (distance < 50) {
 
-            if (
-                zombie.attackCooldown <= 0
-            ) {
+            if (zombie.attackCooldown <= 0) {
 
-                player.health -=
-                    zombie.damage;
+                player.health -= zombie.damage;
 
-                zombie.attackCooldown =
-                    45;
+                zombie.attackCooldown = 50;
 
-                showMessage(
-                    "⚠ YOU ARE BEING ATTACKED"
-                );
-
+                showMessage("⚠ ZOMBIE ATTACK");
             }
-
         }
 
         zombie.attackCooldown--;
-
     }
 
 
     /* SIGNAL */
 
-    player.signal += .015;
+    player.signal += 0.01;
 
     player.signal =
         Math.min(
@@ -918,59 +1051,84 @@ function update() {
         i--
     ) {
 
-        const p = particles[i];
+        const particle = particles[i];
 
-        p.x += p.dx;
-        p.y += p.dy;
+        particle.x += particle.dx;
+        particle.y += particle.dy;
 
-        p.life--;
+        particle.life--;
 
-        if (p.life <= 0) {
-
+        if (particle.life <= 0) {
             particles.splice(i, 1);
-
         }
-
     }
 
 
-    /* NEW WAVE */
+    /* NEXT WAVE */
 
     if (zombies.length === 0) {
-
-        startWave();
-
+        nextWave();
     }
 
 
+    /* DEATH */
+
     if (player.health <= 0) {
-
         endGame();
-
     }
 
 
     updateUI();
 
+
+    /* AUTOSAVE */
+
+    if (gameTime % 600 === 0) {
+        saveGame();
+    }
 }
 
 
-/* =========================
+/* =====================================================
+   PARTICLES
+===================================================== */
+
+function createParticles(x, y) {
+
+    for (let i = 0; i < 5; i++) {
+
+        particles.push({
+
+            x: x,
+            y: y,
+
+            dx:
+                (Math.random() - 0.5) * 5,
+
+            dy:
+                (Math.random() - 0.5) * 5,
+
+            life: 20
+        });
+    }
+}
+
+
+/* =====================================================
    DAY / NIGHT
-========================= */
+===================================================== */
 
 function isNight() {
 
-    return Math.floor(
-        gameTime / 1800
-    ) % 2 === 1;
-
+    return (
+        Math.floor(gameTime / 1800) % 2
+    ) === 1;
 }
 
 
-/* =========================
+/* =====================================================
    DRAW
-========================= */
+===================================================== */
 
 function draw() {
 
@@ -991,7 +1149,7 @@ function draw() {
 
     /* GROUND */
 
-    ctx.fillStyle = "#183518";
+    ctx.fillStyle = "#172d17";
 
     ctx.fillRect(
         0,
@@ -1001,16 +1159,15 @@ function draw() {
     );
 
 
-    /* GRID */
+    /* GRID / ROADS */
 
     ctx.strokeStyle =
-        "rgba(255,255,255,.025)";
+        "rgba(255,255,255,0.035)";
 
-    for (
-        let x = 0;
-        x < WORLD;
-        x += 100
-    ) {
+    ctx.lineWidth = 2;
+
+
+    for (let x = 0; x < WORLD; x += 100) {
 
         ctx.beginPath();
 
@@ -1018,14 +1175,10 @@ function draw() {
         ctx.lineTo(x, WORLD);
 
         ctx.stroke();
-
     }
 
-    for (
-        let y = 0;
-        y < WORLD;
-        y += 100
-    ) {
+
+    for (let y = 0; y < WORLD; y += 100) {
 
         ctx.beginPath();
 
@@ -1033,7 +1186,6 @@ function draw() {
         ctx.lineTo(WORLD, y);
 
         ctx.stroke();
-
     }
 
 
@@ -1041,7 +1193,7 @@ function draw() {
 
     for (const building of buildings) {
 
-        ctx.fillStyle = "#242424";
+        ctx.fillStyle = "#222";
 
         ctx.fillRect(
             building.x,
@@ -1050,7 +1202,7 @@ function draw() {
             building.h
         );
 
-        ctx.strokeStyle = "#555";
+        ctx.strokeStyle = "#444";
 
         ctx.strokeRect(
             building.x,
@@ -1059,6 +1211,42 @@ function draw() {
             building.h
         );
 
+
+        /* WINDOWS */
+
+        ctx.fillStyle = "#59615a";
+
+        for (
+            let x = building.x + 25;
+            x < building.x + building.w - 20;
+            x += 45
+        ) {
+
+            ctx.fillRect(
+                x,
+                building.y + 25,
+                15,
+                20
+            );
+        }
+    }
+
+
+    /* DOORS */
+
+    for (const door of doors) {
+
+        ctx.fillStyle =
+            door.open
+                ? "#4c8a4c"
+                : "#8a542f";
+
+        ctx.fillRect(
+            door.x - 18,
+            door.y - 7,
+            36,
+            14
+        );
     }
 
 
@@ -1068,15 +1256,14 @@ function draw() {
 
         if (crate.searched) continue;
 
-        ctx.fillStyle = "#a8792f";
+        ctx.fillStyle = "#b17e2f";
 
         ctx.fillRect(
-            crate.x - 15,
-            crate.y - 15,
-            30,
-            30
+            crate.x - 13,
+            crate.y - 13,
+            26,
+            26
         );
-
     }
 
 
@@ -1084,7 +1271,7 @@ function draw() {
 
     for (const item of loot) {
 
-        ctx.fillStyle = "#55ddff";
+        ctx.fillStyle = "#48d7ff";
 
         ctx.beginPath();
 
@@ -1097,7 +1284,6 @@ function draw() {
         );
 
         ctx.fill();
-
     }
 
 
@@ -1118,7 +1304,6 @@ function draw() {
         );
 
         ctx.fill();
-
     }
 
 
@@ -1126,27 +1311,32 @@ function draw() {
 
     for (const zombie of zombies) {
 
-        let color = "#557a46";
+        let zombieColor = "#557848";
 
         if (zombie.type === "runner") {
-            color = "#d4a13b";
+            zombieColor = "#c29339";
         }
 
         if (zombie.type === "tank") {
-            color = "#704545";
+            zombieColor = "#704747";
         }
 
         if (zombie.type === "boss") {
-            color = "#9b2525";
+            zombieColor = "#a52222";
         }
 
-        ctx.fillStyle = color;
+
+        const bounce =
+            Math.sin(zombie.animation) * 2;
+
+
+        ctx.fillStyle = zombieColor;
 
         ctx.beginPath();
 
         ctx.arc(
             zombie.x,
-            zombie.y,
+            zombie.y + bounce,
             zombie.radius,
             0,
             Math.PI * 2
@@ -1155,24 +1345,38 @@ function draw() {
         ctx.fill();
 
 
-        /* Health bar */
+        /* EYES */
+
+        ctx.fillStyle = "#eee";
+
+        ctx.fillRect(
+            zombie.x - zombie.radius / 3,
+            zombie.y - zombie.radius / 3,
+            4,
+            4
+        );
+
+        ctx.fillRect(
+            zombie.x + zombie.radius / 5,
+            zombie.y - zombie.radius / 3,
+            4,
+            4
+        );
+
+
+        /* HEALTH BAR */
 
         if (
-            zombie.type === "tank" ||
-            zombie.type === "boss"
+            zombie.type === "boss" ||
+            zombie.type === "tank"
         ) {
-
-            const width =
-                zombie.radius * 2;
 
             ctx.fillStyle = "#111";
 
             ctx.fillRect(
                 zombie.x - zombie.radius,
-                zombie.y -
-                    zombie.radius -
-                    10,
-                width,
+                zombie.y - zombie.radius - 10,
+                zombie.radius * 2,
                 5
             );
 
@@ -1180,17 +1384,17 @@ function draw() {
 
             ctx.fillRect(
                 zombie.x - zombie.radius,
-                zombie.y -
-                    zombie.radius -
-                    10,
-                width *
-                    (zombie.health /
-                        zombie.maxHealth),
+                zombie.y - zombie.radius - 10,
+
+                zombie.radius * 2 *
+                (
+                    zombie.health /
+                    zombie.maxHealth
+                ),
+
                 5
             );
-
         }
-
     }
 
 
@@ -1203,9 +1407,8 @@ function draw() {
         player.y
     );
 
-    ctx.rotate(
-        player.angle
-    );
+    ctx.rotate(player.angle);
+
 
     ctx.fillStyle = "#4da3ff";
 
@@ -1222,14 +1425,14 @@ function draw() {
     ctx.fill();
 
 
-    /* Gun */
+    /* GUN */
 
     ctx.fillStyle = "#111";
 
     ctx.fillRect(
         5,
         -4,
-        30,
+        32,
         8
     );
 
@@ -1240,15 +1443,14 @@ function draw() {
 
     ctx.fillStyle = "#ddd";
 
-    for (const p of particles) {
+    for (const particle of particles) {
 
         ctx.fillRect(
-            p.x,
-            p.y,
+            particle.x,
+            particle.y,
             3,
             3
         );
-
     }
 
 
@@ -1260,7 +1462,7 @@ function draw() {
     if (isNight()) {
 
         ctx.fillStyle =
-            "rgba(3,5,30,.75)";
+            "rgba(3,5,25,0.78)";
 
         ctx.fillRect(
             0,
@@ -1272,27 +1474,27 @@ function draw() {
 
         /* FLASHLIGHT */
 
-        const gradient =
+        const light =
             ctx.createRadialGradient(
                 mouse.x,
                 mouse.y,
-                20,
+                30,
                 mouse.x,
                 mouse.y,
-                330
+                350
             );
 
-        gradient.addColorStop(
+        light.addColorStop(
             0,
-            "rgba(255,255,255,.25)"
+            "rgba(255,255,255,0.25)"
         );
 
-        gradient.addColorStop(
+        light.addColorStop(
             1,
             "rgba(0,0,0,0)"
         );
 
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = light;
 
         ctx.fillRect(
             0,
@@ -1300,18 +1502,16 @@ function draw() {
             canvas.width,
             canvas.height
         );
-
     }
 
 
     drawMinimap();
-
 }
 
 
-/* =========================
+/* =====================================================
    MINIMAP
-========================= */
+===================================================== */
 
 function drawMinimap() {
 
@@ -1324,8 +1524,9 @@ function drawMinimap() {
 
     const y = 20;
 
+
     ctx.fillStyle =
-        "rgba(0,0,0,.65)";
+        "rgba(0,0,0,0.7)";
 
     ctx.fillRect(
         x,
@@ -1335,139 +1536,357 @@ function drawMinimap() {
     );
 
 
-    /* Player */
+    /* BUILDINGS */
 
-    const px =
-        x +
-        player.x / WORLD * size;
+    ctx.fillStyle = "#555";
 
-    const py =
-        y +
-        player.y / WORLD * size;
+    for (const building of buildings) {
 
-    ctx.fillStyle = "#4da3ff";
+        ctx.fillRect(
 
-    ctx.fillRect(
-        px - 3,
-        py - 3,
-        6,
-        6
-    );
+            x +
+            building.x / WORLD * size,
+
+            y +
+            building.y / WORLD * size,
+
+            building.w / WORLD * size,
+
+            building.h / WORLD * size
+        );
+    }
 
 
-    /* Zombies */
+    /* ZOMBIES */
 
     ctx.fillStyle = "#e33";
 
     for (const zombie of zombies) {
 
-        const zx =
-            x +
-            zombie.x / WORLD * size;
-
-        const zy =
-            y +
-            zombie.y / WORLD * size;
-
         ctx.fillRect(
-            zx - 2,
-            zy - 2,
+
+            x +
+            zombie.x / WORLD * size - 2,
+
+            y +
+            zombie.y / WORLD * size - 2,
+
             4,
             4
         );
-
     }
 
+
+    /* PLAYER */
+
+    ctx.fillStyle = "#4da3ff";
+
+    ctx.fillRect(
+
+        x +
+        player.x / WORLD * size - 3,
+
+        y +
+        player.y / WORLD * size - 3,
+
+        6,
+        6
+    );
 }
 
 
-/* =========================
+/* =====================================================
    UI
-========================= */
+===================================================== */
 
 function updateUI() {
 
-    document.getElementById(
-        "health"
-    ).textContent =
-        Math.max(
-            0,
-            Math.floor(player.health)
-        );
+    const health =
+        document.getElementById("health");
 
-    document.getElementById(
-        "ammo"
-    ).textContent =
-        player.ammo;
+    const ammo =
+        document.getElementById("ammo");
 
-    document.getElementById(
-        "reserve"
-    ).textContent =
-        player.reserve;
+    const reserve =
+        document.getElementById("reserve");
 
-    document.getElementById(
-        "signal"
-    ).textContent =
-        Math.floor(player.signal);
+    const stamina =
+        document.getElementById("stamina");
 
-    document.getElementById(
-        "stamina"
-    ).textContent =
-        Math.floor(player.stamina);
+    const signal =
+        document.getElementById("signal");
 
+    const levelElement =
+        document.getElementById("level");
+
+    const coinsElement =
+        document.getElementById("coins");
+
+    const weaponElement =
+        document.getElementById("weapon");
+
+    const mission =
+        document.getElementById("mission");
+
+
+    if (health) {
+        health.textContent =
+            Math.max(
+                0,
+                Math.floor(player.health)
+            );
+    }
+
+    if (ammo) {
+        ammo.textContent = player.ammo;
+    }
+
+    if (reserve) {
+        reserve.textContent = player.reserve;
+    }
+
+    if (stamina) {
+        stamina.textContent =
+            Math.floor(player.stamina);
+    }
+
+    if (signal) {
+        signal.textContent =
+            Math.floor(player.signal);
+    }
+
+    if (levelElement) {
+        levelElement.textContent = level;
+    }
+
+    if (coinsElement) {
+        coinsElement.textContent = coins;
+    }
+
+    if (weaponElement) {
+        weaponElement.textContent =
+            weapons[player.weapon].name;
+    }
+
+    if (mission) {
+        mission.textContent =
+            "WAVE " +
+            wave +
+            " • KILLS " +
+            kills;
+    }
 }
 
 
-/* =========================
+/* =====================================================
    MESSAGE
-========================= */
+===================================================== */
 
-let messageTimer;
+let messageTimer = null;
 
 function showMessage(text) {
 
-    const message =
-        document.getElementById(
-            "message"
-        );
+    const element =
+        document.getElementById("message");
 
-    message.textContent = text;
+    if (!element) return;
+
+    element.textContent = text;
 
     clearTimeout(messageTimer);
 
     messageTimer =
         setTimeout(() => {
 
-            message.textContent = "";
+            element.textContent = "";
 
         }, 1800);
-
 }
 
 
-/* =========================
+/* =====================================================
+   SAVE
+===================================================== */
+
+function saveGame() {
+
+    const save = {
+
+        player: {
+            x: player.x,
+            y: player.y,
+
+            health: player.health,
+            maxHealth: player.maxHealth,
+
+            stamina: player.stamina,
+            signal: player.signal,
+
+            ammo: player.ammo,
+            maxAmmo: player.maxAmmo,
+            reserve: player.reserve,
+
+            speed: player.speed,
+            damage: player.damage,
+
+            weapon: player.weapon
+        },
+
+        wave: wave,
+        kills: kills,
+
+        xp: xp,
+        level: level,
+        coins: coins,
+
+        selectedCharacter:
+            selectedCharacter
+    };
+
+
+    localStorage.setItem(
+        "deadSignalSave",
+        JSON.stringify(save)
+    );
+
+    showMessage("💾 GAME SAVED");
+}
+
+
+/* =====================================================
+   LOAD
+===================================================== */
+
+function loadGame() {
+
+    const saved =
+        localStorage.getItem(
+            "deadSignalSave"
+        );
+
+
+    if (!saved) {
+
+        showMessage("NO SAVE FOUND");
+
+        return;
+    }
+
+
+    try {
+
+        const data =
+            JSON.parse(saved);
+
+        Object.assign(
+            player,
+            data.player
+        );
+
+        wave = data.wave || 0;
+        kills = data.kills || 0;
+
+        xp = data.xp || 0;
+        level = data.level || 1;
+        coins = data.coins || 0;
+
+        selectedCharacter =
+            data.selectedCharacter ||
+            "scout";
+
+
+        gameStarted = true;
+        gameOver = false;
+
+        document.getElementById(
+            "menu"
+        ).style.display = "none";
+
+
+        zombies = [];
+
+        nextWave();
+
+        showMessage("💾 SAVE LOADED");
+
+    } catch (error) {
+
+        console.error(
+            "Save file error:",
+            error
+        );
+
+        showMessage(
+            "SAVE FILE CORRUPTED"
+        );
+    }
+}
+
+
+/* =====================================================
+   CONTINUE BUTTON
+===================================================== */
+
+const continueButton =
+    document.getElementById(
+        "continueButton"
+    );
+
+if (continueButton) {
+
+    continueButton.addEventListener(
+        "click",
+        () => {
+            loadGame();
+        }
+    );
+}
+
+
+/* =====================================================
    GAME OVER
-========================= */
+===================================================== */
 
 function endGame() {
 
     gameOver = true;
 
-    document.getElementById(
-        "gameOver"
-    ).style.display = "flex";
+    const gameOverScreen =
+        document.getElementById(
+            "gameOver"
+        );
 
-    document.getElementById(
-        "finalScore"
-    ).textContent =
-        Math.floor(gameTime / 60);
+    if (gameOverScreen) {
 
+        gameOverScreen.style.display =
+            "flex";
+    }
+
+
+    const finalWave =
+        document.getElementById(
+            "finalWave"
+        );
+
+    const finalKills =
+        document.getElementById(
+            "finalKills"
+        );
+
+
+    if (finalWave) {
+        finalWave.textContent = wave;
+    }
+
+    if (finalKills) {
+        finalKills.textContent = kills;
+    }
 }
 
 
-/* =========================
+/* =====================================================
    GAME LOOP
-========================= */
+===================================================== */
 
 function gameLoop() {
 
@@ -1478,8 +1897,8 @@ function gameLoop() {
     requestAnimationFrame(
         gameLoop
     );
-
 }
 
+
 gameLoop();
-```
+
