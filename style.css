@@ -1,15 +1,130 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-    overflow:hidden;
-    background:#111;
+body {
+    overflow: hidden;
+    background: #050505;
+    font-family: Arial, sans-serif;
+    color: white;
 }
 
-canvas{
-    display:block;
-    background:#2b7a2b;
+canvas {
+    display: block;
+    cursor: none;
+}
+
+#ui {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+.topbar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    display: flex;
+    gap: 25px;
+
+    padding: 12px 22px;
+    background: rgba(0,0,0,.65);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 12px;
+
+    font-size: 18px;
+    backdrop-filter: blur(8px);
+}
+
+#message {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    font-size: 20px;
+    text-shadow: 0 2px 5px black;
+}
+
+#help {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    padding: 8px 15px;
+    background: rgba(0,0,0,.6);
+    border-radius: 8px;
+
+    font-size: 13px;
+    color: #bbb;
+}
+
+#crosshair {
+    position: fixed;
+    width: 18px;
+    height: 18px;
+    border: 2px solid white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#crosshair::after {
+    content: "";
+    position: absolute;
+
+    width: 4px;
+    height: 4px;
+
+    background: white;
+    border-radius: 50%;
+
+    left: 5px;
+    top: 5px;
+}
+
+#gameOver {
+    position: fixed;
+    inset: 0;
+
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0,0,0,.9);
+
+    text-align: center;
+}
+
+#gameOver h1 {
+    font-size: 50px;
+    letter-spacing: 5px;
+}
+
+#gameOver p {
+    margin: 15px;
+    color: #aaa;
+}
+
+#gameOver button {
+    padding: 12px 25px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: white;
+    color: black;
+
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#gameOver button:hover {
+    transform: scale(1.05);
 }
