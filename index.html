@@ -1,81 +1,165 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DEAD CITY // Outbreak</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>DEAD CITY // Outbreak</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div id="loading">
-    <b>DEAD CITY</b>
-    <span id="loadText">LOADING CITY...</span>
-    <div><i id="loadBar"></i></div>
-</div>
+    <!-- LOADING -->
+    <div id="loading">
+        <h1>DEAD CITY</h1>
+        <p id="loadText">GENERATING CITY...</p>
 
-<div id="menu">
-    <h1>DEAD CITY</h1>
-    <p>OUTBREAK // NIGHT ZERO</p>
-    <button id="play">ENTER CITY</button>
-    <small>
-        WASD MOVE · SHIFT SPRINT · MOUSE LOOK · LMB FIRE · R RELOAD · F FLASHLIGHT · ESC PAUSE
-    </small>
-</div>
-
-<div id="hud">
-
-    <div id="top">
-        <b>DEAD CITY</b>
-        <span>WAVE <strong id="wave">1</strong></span>
-        <span>HOSTILES <strong id="hostiles">0</strong></span>
-        <span>KILLS <strong id="kills">0</strong></span>
+        <div class="loadingBar">
+            <span id="loadBar"></span>
+        </div>
     </div>
 
-    <div id="cross">
-        <i></i><i></i><i></i><i></i><em></em>
+
+    <!-- MAIN MENU -->
+    <div id="menu">
+
+        <h1>DEAD CITY</h1>
+
+        <p>OUTBREAK // NIGHT ZERO</p>
+
+        <button id="play">
+            ENTER CITY
+        </button>
+
+        <div class="controls">
+            WASD MOVE · SHIFT SPRINT · MOUSE LOOK · LEFT CLICK FIRE
+            <br>
+            R RELOAD · F FLASHLIGHT · ESC PAUSE
+        </div>
+
     </div>
 
-    <div id="health">
-        <label>
-            HEALTH <b id="hpText">100</b>
-        </label>
-        <div><i id="hpBar"></i></div>
+
+    <!-- HUD -->
+    <div id="hud">
+
+        <div id="top">
+
+            <strong>DEAD CITY</strong>
+
+            <span>
+                WAVE
+                <b id="wave">1</b>
+            </span>
+
+            <span>
+                HOSTILES
+                <b id="hostiles">0</b>
+            </span>
+
+            <span>
+                KILLS
+                <b id="kills">0</b>
+            </span>
+
+        </div>
+
+
+        <!-- CROSSHAIR -->
+        <div id="crosshair">
+
+            <span class="cross top"></span>
+            <span class="cross bottom"></span>
+            <span class="cross left"></span>
+            <span class="cross right"></span>
+
+            <span class="dot"></span>
+
+        </div>
+
+
+        <!-- HEALTH -->
+        <div id="health">
+
+            <div class="healthText">
+                <span>HEALTH</span>
+                <b id="hpText">100</b>
+            </div>
+
+            <div class="healthBackground">
+                <span id="hpBar"></span>
+            </div>
+
+        </div>
+
+
+        <!-- WEAPON -->
+        <div id="weapon">
+
+            <small>M4A1</small>
+
+            <div>
+                <b id="mag">30</b>
+                <span>/</span>
+                <em id="reserve">150</em>
+            </div>
+
+        </div>
+
+
+        <!-- MINIMAP -->
+        <canvas
+            id="map"
+            width="200"
+            height="200">
+        </canvas>
+
+
+        <div id="notice"></div>
+
     </div>
 
-    <div id="weapon">
-        <b>M4A1</b>
-        <strong id="mag">30</strong>
-        <span>/ <em id="reserve">150</em></span>
+
+    <!-- PAUSE -->
+    <div id="pause">
+
+        <h2>PAUSED</h2>
+
+        <p>PRESS ESC TO RESUME</p>
+
     </div>
 
-    <canvas id="map" width="180" height="180"></canvas>
 
-    <div id="notice"></div>
-</div>
+    <!-- DEATH -->
+    <div id="death">
 
-<div id="pause">
-    <h2>PAUSED</h2>
-    <p>PRESS ESC TO RESUME</p>
-</div>
+        <h2>YOU DIED</h2>
 
-<div id="death">
-    <h2>YOU DIED</h2>
-    <p id="deathStats"></p>
-    <button id="respawn">RESPAWN</button>
-</div>
+        <p id="deathStats"></p>
 
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        <button id="respawn">
+            RESPAWN
+        </button>
+
+    </div>
+
+
+    <!-- THREE.JS -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three":
+            "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+
+            "three/addons/":
+            "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
     }
-}
-</script>
+    </script>
 
-<script type="module" src="game.js"></script>
+    <script type="module" src="game.js"></script>
 
 </body>
 </html>
