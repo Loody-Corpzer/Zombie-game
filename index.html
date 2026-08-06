@@ -11,155 +11,47 @@
 
 <body>
 
-    <!-- LOADING -->
-    <div id="loading">
-        <h1>DEAD CITY</h1>
-        <p id="loadText">GENERATING CITY...</p>
-
-        <div class="loadingBar">
-            <span id="loadBar"></span>
-        </div>
-    </div>
-
-
-    <!-- MAIN MENU -->
-    <div id="menu">
-
-        <h1>DEAD CITY</h1>
-
-        <p>OUTBREAK // NIGHT ZERO</p>
-
-        <button id="play">
-            ENTER CITY
-        </button>
-
-        <div class="controls">
-            WASD MOVE · SHIFT SPRINT · MOUSE LOOK · LEFT CLICK FIRE
-            <br>
-            R RELOAD · F FLASHLIGHT · ESC PAUSE
-        </div>
-
-    </div>
-
-
-    <!-- HUD -->
     <div id="hud">
-
-        <div id="top">
-
-            <strong>DEAD CITY</strong>
-
-            <span>
-                WAVE
-                <b id="wave">1</b>
-            </span>
-
-            <span>
-                HOSTILES
-                <b id="hostiles">0</b>
-            </span>
-
-            <span>
-                KILLS
-                <b id="kills">0</b>
-            </span>
-
+        <div class="top">
+            <b>DEAD CITY</b>
+            <span>WAVE <strong id="wave">1</strong></span>
+            <span>HOSTILES <strong id="hostiles">0</strong></span>
+            <span>KILLS <strong id="kills">0</strong></span>
         </div>
 
+        <div id="crosshair">+</div>
 
-        <!-- CROSSHAIR -->
-        <div id="crosshair">
-
-            <span class="cross top"></span>
-            <span class="cross bottom"></span>
-            <span class="cross left"></span>
-            <span class="cross right"></span>
-
-            <span class="dot"></span>
-
-        </div>
-
-
-        <!-- HEALTH -->
-        <div id="health">
-
-            <div class="healthText">
-                <span>HEALTH</span>
-                <b id="hpText">100</b>
+        <div id="healthBox">
+            <div>HEALTH <strong id="healthText">100</strong></div>
+            <div class="healthBar">
+                <div id="healthBar"></div>
             </div>
-
-            <div class="healthBackground">
-                <span id="hpBar"></span>
-            </div>
-
         </div>
 
-
-        <!-- WEAPON -->
-        <div id="weapon">
-
+        <div id="ammo">
             <small>M4A1</small>
-
-            <div>
-                <b id="mag">30</b>
-                <span>/</span>
-                <em id="reserve">150</em>
-            </div>
-
+            <b id="ammoText">30</b>
+            <span>/ 150</span>
         </div>
 
+        <div id="message"></div>
 
-        <!-- MINIMAP -->
-        <canvas
-            id="map"
-            width="200"
-            height="200">
-        </canvas>
-
-
-        <div id="notice"></div>
-
+        <div id="controls">
+            WASD MOVE • SHIFT SPRINT • CLICK SHOOT • R RELOAD
+        </div>
     </div>
 
-
-    <!-- PAUSE -->
-    <div id="pause">
-
-        <h2>PAUSED</h2>
-
-        <p>PRESS ESC TO RESUME</p>
-
-    </div>
-
-
-    <!-- DEATH -->
-    <div id="death">
-
-        <h2>YOU DIED</h2>
-
+    <div id="deathScreen">
+        <h1>YOU DIED</h1>
         <p id="deathStats"></p>
-
-        <button id="respawn">
-            RESPAWN
-        </button>
-
+        <button id="respawn">RESPAWN</button>
     </div>
 
+    <!-- Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
-    <!-- THREE.JS -->
-    <script type="importmap">
-    {
-        "imports": {
-            "three":
-            "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-
-            "three/addons/":
-            "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
-        }
-    }
-    </script>
-
-    <script type="module" src="game.js"></script>
+    <!-- Game -->
+    <script src="game.js"></script>
 
 </body>
 </html>
