@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>DEAD CITY // Outbreak</title>
+    <title>DEAD CITY // OUTBREAK</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -12,45 +13,142 @@
 <body>
 
     <div id="hud">
-        <div class="top">
-            <b>DEAD CITY</b>
-            <span>WAVE <strong id="wave">1</strong></span>
-            <span>HOSTILES <strong id="hostiles">0</strong></span>
-            <span>KILLS <strong id="kills">0</strong></span>
+
+        <div class="topbar">
+            <div class="logo">DEAD CITY</div>
+
+            <div>WAVE <b id="wave">1</b></div>
+            <div>HOSTILES <b id="hostiles">0</b></div>
+            <div>KILLS <b id="kills">0</b></div>
+
+            <div class="coins">
+                🪙 <b id="coins">0</b>
+            </div>
         </div>
 
         <div id="crosshair">+</div>
 
         <div id="healthBox">
-            <div>HEALTH <strong id="healthText">100</strong></div>
+
+            <div class="healthTitle">
+                HEALTH
+                <b id="healthText">100</b>
+            </div>
+
             <div class="healthBar">
                 <div id="healthBar"></div>
             </div>
+
         </div>
 
-        <div id="ammo">
-            <small>M4A1</small>
-            <b id="ammoText">30</b>
-            <span>/ 150</span>
+
+        <div id="weaponInfo">
+
+            <div id="weaponName">PISTOL</div>
+
+            <div>
+                <b id="ammoText">12</b>
+                <span>/ <span id="reserveText">120</span></span>
+            </div>
+
+        </div>
+
+
+        <div id="controls">
+            WASD MOVE • SHIFT SPRINT • CLICK SHOOT • R RELOAD • M MAP • B ARMORY
         </div>
 
         <div id="message"></div>
 
-        <div id="controls">
-            WASD MOVE • SHIFT SPRINT • CLICK SHOOT • R RELOAD
-        </div>
     </div>
+
+
+    <!-- MAP -->
+
+    <div id="mapScreen">
+
+        <div class="mapHeader">
+            <b>NEW YORK CITY // TACTICAL MAP</b>
+            <span>PRESS M TO CLOSE</span>
+        </div>
+
+        <canvas id="mapCanvas"></canvas>
+
+    </div>
+
+
+    <!-- ARMORY -->
+
+    <div id="armory">
+
+        <div class="armoryHeader">
+
+            <div>
+                <h1>ARMORY</h1>
+                <p>WEAPON PROCUREMENT</p>
+            </div>
+
+            <div class="armoryCoins">
+                🪙 <b id="shopCoins">0</b>
+            </div>
+
+        </div>
+
+
+        <div class="categories">
+
+            <button class="category active" data-category="all">
+                ALL
+            </button>
+
+            <button class="category" data-category="rapid">
+                RAPID FIRE
+            </button>
+
+            <button class="category" data-category="heavy">
+                HEAVY DUTY
+            </button>
+
+            <button class="category" data-category="precision">
+                PRECISION
+            </button>
+
+        </div>
+
+
+        <div id="weaponList"></div>
+
+
+        <div class="armoryBottom">
+            PRESS B TO CLOSE
+        </div>
+
+    </div>
+
 
     <div id="deathScreen">
+
         <h1>YOU DIED</h1>
-        <p id="deathStats"></p>
-        <button id="respawn">RESPAWN</button>
+
+        <p>
+            KILLS:
+            <span id="deathKills">0</span>
+        </p>
+
+        <p>
+            COINS:
+            <span id="deathCoins">0</span>
+        </p>
+
+        <button id="respawn">
+            RESPAWN
+        </button>
+
     </div>
 
-    <!-- Three.js -->
+
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
-    <!-- Game -->
     <script src="game.js"></script>
 
 </body>
