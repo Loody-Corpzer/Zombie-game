@@ -1,43 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Dead Signal</title>
-
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DEAD CITY // Outbreak</title>
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <canvas id="game"></canvas>
+<div id="loading">
+    <b>DEAD CITY</b>
+    <span id="loadText">LOADING CITY...</span>
+    <div><i id="loadBar"></i></div>
+</div>
 
-    <div id="ui">
-        <div class="topbar">
-            <div>❤️ <span id="health">100</span></div>
-            <div>🔫 <span id="ammo">12</span> / <span id="reserve">48</span></div>
-            <div>📡 <span id="signal">100</span>%</div>
-            <div>⚡ <span id="stamina">100</span></div>
-        </div>
+<div id="menu">
+    <h1>DEAD CITY</h1>
+    <p>OUTBREAK // NIGHT ZERO</p>
+    <button id="play">ENTER CITY</button>
+    <small>
+        WASD MOVE · SHIFT SPRINT · MOUSE LOOK · LMB FIRE · R RELOAD · F FLASHLIGHT · ESC PAUSE
+    </small>
+</div>
 
-        <div id="message"></div>
+<div id="hud">
 
-        <div id="crosshair"></div>
-
-        <div id="help">
-            WASD Move • SHIFT Sprint • Mouse Shoot • R Reload • F Radio • E Search
-        </div>
+    <div id="top">
+        <b>DEAD CITY</b>
+        <span>WAVE <strong id="wave">1</strong></span>
+        <span>HOSTILES <strong id="hostiles">0</strong></span>
+        <span>KILLS <strong id="kills">0</strong></span>
     </div>
 
-    <div id="gameOver">
-        <h1>THE SIGNAL IS DEAD</h1>
-        <p>You survived <span id="finalScore">0</span> seconds.</p>
-        <button onclick="location.reload()">TRY AGAIN</button>
+    <div id="cross">
+        <i></i><i></i><i></i><i></i><em></em>
     </div>
 
-    <script src="game.js"></script>
+    <div id="health">
+        <label>
+            HEALTH <b id="hpText">100</b>
+        </label>
+        <div><i id="hpBar"></i></div>
+    </div>
+
+    <div id="weapon">
+        <b>M4A1</b>
+        <strong id="mag">30</strong>
+        <span>/ <em id="reserve">150</em></span>
+    </div>
+
+    <canvas id="map" width="180" height="180"></canvas>
+
+    <div id="notice"></div>
+</div>
+
+<div id="pause">
+    <h2>PAUSED</h2>
+    <p>PRESS ESC TO RESUME</p>
+</div>
+
+<div id="death">
+    <h2>YOU DIED</h2>
+    <p id="deathStats"></p>
+    <button id="respawn">RESPAWN</button>
+</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module" src="game.js"></script>
 
 </body>
 </html>
